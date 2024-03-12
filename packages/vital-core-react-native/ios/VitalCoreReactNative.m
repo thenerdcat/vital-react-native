@@ -44,10 +44,7 @@ RCT_EXTERN_METHOD(deregisterProvider:(NSString *)provider
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(signOut:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(sdkVersion:(RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(cleanUp:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(getAccessToken:(RCTPromiseResolveBlock)resolve

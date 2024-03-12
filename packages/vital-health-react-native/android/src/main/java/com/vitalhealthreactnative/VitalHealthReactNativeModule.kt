@@ -1,15 +1,9 @@
 package com.vitalhealthreactnative
 
-import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Intent
 import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultCallback
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContract
-import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions.Companion.EXTRA_PERMISSIONS
-import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions.Companion.EXTRA_PERMISSION_GRANT_RESULTS
-import com.facebook.react.ReactInstanceManager
 import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
@@ -21,14 +15,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import java.time.Instant
-import java.util.concurrent.atomic.AtomicReference
 
 const val VITAL_HEALTH_ERROR = "VitalHealthError"
 const val VITAL_REQUEST_CODE = 1984
 
 @ReactModule(name = VitalHealthReactNativeModule.NAME)
 class VitalHealthReactNativeModule(reactContext: ReactApplicationContext) :
-  ReactContextBaseJavaModule(reactContext) {
+  ReactContextBaseJavaModule(reactContext), ActivityEventListener {
 
   private val logger = VitalLogger.getOrCreate()
 
@@ -46,10 +39,8 @@ class VitalHealthReactNativeModule(reactContext: ReactApplicationContext) :
     return NAME
   }
 
-  @ReactMethod
-  fun isAvailable(promise: Promise) {
-    val availability = VitalHealthConnectManager.isAvailable(reactApplicationContext)
-    promise.resolve(availability == HealthConnectAvailability.Installed)
+  init {
+    reactContext.addActivityEventListener(this)
   }
 
   @ReactMethod
@@ -78,7 +69,8 @@ class VitalHealthReactNativeModule(reactContext: ReactApplicationContext) :
     mainScope.launch {
       manager.configureHealthConnectClient(
         logsEnabled = enableLogs,
-        syncOnAppStart = syncOnAppStart,
+        // This key is intended for VitalHealthAutoStarter, which is not used by the RN SDK.
+        syncOnAppStart = false,
         numberOfDaysToBackFill = numberOfDaysToBackFill,
       )
 
@@ -130,14 +122,6 @@ class VitalHealthReactNativeModule(reactContext: ReactApplicationContext) :
       VITAL_HEALTH_ERROR,
       "Cannot find the current ReactNative Activity"
     )
-
-    if (activity !is ComponentActivity) {
-      return promise.reject(
-        VITAL_HEALTH_ERROR,
-        "The Android Activity class of your React Native host app must be a androidx.activity.ComponentActivity subclass for the permission request flow to function properly."
-      )
-    }
-
     val read = readResources.toArrayList().mapTo(mutableSetOf()) {
       try {
         VitalResource.valueOf(it as String)
@@ -160,27 +144,8 @@ class VitalHealthReactNativeModule(reactContext: ReactApplicationContext) :
       askForPermission = AskForPermissionContinuation(contract, promise)
     }
 
-    val registry = activity.activityResultRegistry
-    val launcherRef = AtomicReference<ActivityResultLauncher<*>>(null)
-    val launcher = registry.register("io.tryvital.health.ask", contract, ActivityResultCallback { result ->
-      val continuation = synchronized(this) {
-        val currentValue = askForPermission
-        askForPermission = null
-        return@synchronized currentValue
-      }
-
-      val launcher = launcherRef.getAndSet(null)
-      launcher?.unregister()
-
-      if (continuation != null) {
-        mainScope.launch {
-          result.await()
-          continuation.promise.resolve(null)
-        }
-      }
-    })
-    launcherRef.set(launcher)
-    launcher.launch(Unit)
+    val intent = contract.createIntent(reactApplicationContext, Unit)
+    activity.startActivityForResult(intent, VITAL_REQUEST_CODE)
   }
 
   @ReactMethod
@@ -218,6 +183,14 @@ class VitalHealthReactNativeModule(reactContext: ReactApplicationContext) :
       } catch (e: Throwable) {
         promise.reject(e)
       }
+    }
+  }
+
+  @ReactMethod
+  fun cleanUp(promise: Promise) {
+    mainScope.launch {
+      vitalHealthConnectManager.cleanUp()
+      promise.resolve(null)
     }
   }
 
@@ -324,40 +297,32 @@ class VitalHealthReactNativeModule(reactContext: ReactApplicationContext) :
     return VitalHealthEvent.values().associate { it.value to it.value }.toMutableMap()
   }
 
-  companion object {
-    const val NAME = "VitalHealthReactNative"
+  override fun onActivityResult(p0: Activity?, p1: Int, p2: Int, p3: Intent?) {
+    // p1: request code
+    // p2: result code
+    if (p1 == VITAL_REQUEST_CODE) {
+      val continuation = synchronized(this) { askForPermission } ?: return
 
-    /**
-     * This method is a workaround which manually dispatches request permission results back to
-     * where the Health Connect activity contract expects it.
-     *
-     * As at React Native 0.37, ReactActivity eats the `onRequestPermissionsResult` and does not
-     * forward it to AndroidX AppCompatActivity / ComponentActivity. This causes some (if not all)
-     * ActivityResultsContract to be broken.
-     *
-     */
-    @SuppressLint("VisibleForTests")
-    fun onRequestPermissionsResult(
-      reactInstanceManager: ReactInstanceManager,
-      p0: Int,
-      p1: Array<out String>?,
-      p2: IntArray?
-    ) {
-      val module = reactInstanceManager.currentReactContext?.getNativeModule(VitalHealthReactNativeModule::class.java) ?: return
-
-      if (synchronized(module) { module.askForPermission != null }) {
-        val activity = module.currentActivity as ComponentActivity
-
-        // Lifted from ComponentActivity.onRequestPermissionsResult
-        activity.activityResultRegistry.dispatchResult(
-          p0,
-          android.app.Activity.RESULT_OK,
-          Intent()
-            .putExtra(EXTRA_PERMISSIONS, p1!!)
-            .putExtra(EXTRA_PERMISSION_GRANT_RESULTS, p2!!)
-        )
+      val resultAsync = continuation.contract.parseResult(p2, p3)
+      val job = mainScope.launch {
+        resultAsync.await()
+        continuation.promise.resolve(null)
+      }
+      job.invokeOnCompletion {
+        if (it != null) {
+          continuation.promise.reject(VITAL_HEALTH_ERROR, "ask for permission has encountered an error", it)
+        }
+        synchronized(this) { this.askForPermission = null }
       }
     }
+  }
+
+  override fun onNewIntent(p0: Intent?) {
+    // no-op
+  }
+
+  companion object {
+    const val NAME = "VitalHealthReactNative"
   }
 }
 

@@ -7,7 +7,6 @@ import HomeScreen from './screens/HomeScreen';
 import {ConnectSource} from './screens/ConnectScreen';
 import {UserScreen} from './screens/UserScreen';
 import {
-  VitalHealth,
   VitalHealthEvents,
   VitalHealthReactNativeModule,
 } from '@tryvital/vital-health-react-native';
@@ -44,9 +43,6 @@ const App = () => {
   useEffect(() => {
     const initialize = async () => {
       console.log("Starting to initialize App")
-
-      const isHealthSDKAvailable = await VitalHealth.isAvailable();
-      console.log(`HealthKit/HealthConnect available: ${isHealthSDKAvailable}`);
 
       // Example: Read BLE Glucose Meter
       // await readBLEGlucoseMeter(vitalDevicesManager)

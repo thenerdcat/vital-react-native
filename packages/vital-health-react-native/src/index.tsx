@@ -1,6 +1,5 @@
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import type { HealthConfig } from './health_config';
-import { VitalCore } from '@tryvital/vital-core-react-native';
 
 // Reexports
 export * from './health_config';
@@ -30,14 +29,6 @@ export const VitalHealthEvents = {
 
 export class VitalHealth {
   static status = new NativeEventEmitter(VitalHealthReactNative);
-
-  static isAvailable(): Promise<boolean> {
-    if (Platform.OS === 'android') {
-      return VitalHealthReactNative.isAvailable();
-    } else {
-      return Promise.resolve(true);
-    }
-  }
 
   static configure(healthConfig: HealthConfig): Promise<void> {
     if (Platform.OS === 'android') {
@@ -106,12 +97,8 @@ export class VitalHealth {
     return VitalHealthReactNative.syncData(resources);
   }
 
-  /**
-   * @deprecated Use `VitalCore.signOut()`, which now resets both the Vital Core
-   * and Health SDKs.
-   */
   static cleanUp(): Promise<void> {
-    return VitalCore.signOut();
+    return VitalHealthReactNative.cleanUp();
   }
 }
 

@@ -143,7 +143,7 @@ export const UserScreen = ({route, navigation}) => {
 
         {
             !isCurrentSDKUser && isSDKConfigured &&
-            <Button onPress={() => VitalCore.signOut()}>
+            <Button onPress={() => VitalHealth.cleanUp()}>
                 Reset SDK
             </Button>
         }

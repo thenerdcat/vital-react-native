@@ -12,6 +12,7 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapter
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.*
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
@@ -25,6 +26,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.security.Provider
 import java.time.ZoneId
 import java.util.*
 
@@ -34,6 +36,7 @@ internal val moshi by lazy {
   Moshi.Builder()
     .add(ReactNativeTimeSeriesData.adapterFactory())
     .add(Date::class.java, Rfc3339DateJsonAdapter())
+    .addLast(KotlinJsonAdapterFactory())
     .build()
 }
 
@@ -130,10 +133,10 @@ class VitalCoreReactNativeModule(reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
-  fun signOut(promise: Promise) {
+  fun cleanUp(promise: Promise) {
     mainScope.launch {
       try {
-        client.signOut()
+        client.cleanUp()
         promise.resolve(null)
       } catch (e: Throwable) {
         promise.reject(VITAL_CORE_ERROR, e.message, e)
@@ -273,11 +276,6 @@ class VitalCoreReactNativeModule(reactContext: ReactApplicationContext) :
         promise.reject(VITAL_CORE_ERROR, "${(e::class.simpleName ?: "")}: ${e.message}", e)
       }
     }
-  }
-
-  @ReactMethod
-  fun sdkVersion(promise: Promise) {
-    promise.resolve(VitalClient.sdkVersion)
   }
 
   @ReactMethod

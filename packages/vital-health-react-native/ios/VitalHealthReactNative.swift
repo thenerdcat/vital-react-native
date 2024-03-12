@@ -167,6 +167,14 @@ class VitalHealthReactNative: RCTEventEmitter {
     }
   }
 
+  @objc(cleanUp:rejecter:)
+  func cleanUp(_ resolve: @escaping RCTPromiseResolveBlock, reject:RCTPromiseRejectBlock) {
+    Task {
+      await VitalHealthKitClient.shared.cleanUp()
+      resolve(())
+    }
+  }
+
   @objc(hasAskedForPermission:resolver:rejecter:)
   func hasAskedForPermission(_ resource: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
     do {
@@ -252,8 +260,6 @@ private func mapResourceToReadableVitalResource(_ name: String) throws -> VitalR
       return .individual(.distanceWalkingRunning)
     case "vo2Max":
       return .individual(.vo2Max)
-    case "exerciseTime":
-      return .individual(.exerciseTime)
     case "weight":
       return .individual(.weight)
     case "bodyFat":

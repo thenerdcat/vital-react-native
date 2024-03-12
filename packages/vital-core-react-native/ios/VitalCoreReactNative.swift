@@ -41,7 +41,7 @@ class VitalCoreReactNative: RCTEventEmitter {
         try await VitalClient.signIn(withRawToken: token)
         resolve(())
       } catch let error {
-        reject("VitalCoreError", "\(error)", error)
+        reject("VitalCoreError", "failed to sign-in", error)
       }
     }
   }
@@ -104,7 +104,7 @@ class VitalCoreReactNative: RCTEventEmitter {
         let result = try await VitalClient.shared.isUserConnected(to: slug)
         resolve(result)
       } catch let error {
-        reject(errorKey, "\(error)", error)
+        reject(errorKey, error.localizedDescription, error)
       }
     }
   }
@@ -122,7 +122,7 @@ class VitalCoreReactNative: RCTEventEmitter {
         }
         resolve(jsonObjects)
       } catch let error {
-        reject(errorKey, "\(error)", error)
+        reject(errorKey, error.localizedDescription, error)
       }
     }
   }
@@ -143,7 +143,7 @@ class VitalCoreReactNative: RCTEventEmitter {
         try await VitalClient.shared.checkConnectedSource(for: slug)
         resolve(())
       } catch let error {
-        reject(errorKey, "\(error)", error)
+        reject(errorKey, error.localizedDescription, error)
       }
     }
   }
@@ -199,22 +199,17 @@ class VitalCoreReactNative: RCTEventEmitter {
         )
         resolve(())
       } catch let error {
-        reject(errorKey, "\(error)", error)
+        reject(errorKey, error.localizedDescription, error)
       }
     }
   }
 
-  @objc(signOut:rejecter:)
-  func signOut(resolve:@escaping RCTPromiseResolveBlock, reject:RCTPromiseRejectBlock) {
+  @objc(cleanUp:rejecter:)
+  func cleanUp(resolve:@escaping RCTPromiseResolveBlock, reject:RCTPromiseRejectBlock) {
     Task {
-      await VitalClient.shared.signOut()
+      await VitalClient.shared.cleanUp()
       resolve(())
     }
-  }
-
-  @objc(sdkVersion:rejecter:)
-  func sdkVersion(resolve:@escaping RCTPromiseResolveBlock, reject:RCTPromiseRejectBlock) {
-    resolve(VitalClient.sdkVersion)
   }
 
   @objc(getAccessToken:rejecter:)
@@ -224,7 +219,7 @@ class VitalCoreReactNative: RCTEventEmitter {
         let accessToken = try await VitalClient.getAccessToken()
         resolve(accessToken)
       } catch let error {
-        reject(errorKey, "\(error)", error)
+        reject(errorKey, error.localizedDescription, error)
       }
     }
   }
@@ -236,7 +231,7 @@ class VitalCoreReactNative: RCTEventEmitter {
         try await VitalClient.refreshToken()
         resolve(())
       } catch let error {
-        reject(errorKey, "\(error)", error)
+        reject(errorKey, error.localizedDescription, error)
       }
     }
   }
@@ -258,7 +253,7 @@ class VitalCoreReactNative: RCTEventEmitter {
         try await VitalClient.shared.user.deregisterProvider(provider: slug)
         resolve(())
       } catch let error {
-        reject(errorKey, "\(error)", error)
+        reject(errorKey, error.localizedDescription, error)
       }
     }
   }

@@ -1,6 +1,6 @@
 {
   "name": "@tryvital/vital-core-react-native",
-  "version": "3.0.9",
+  "version": "2.0.2",
   "description": "test",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -63,7 +63,7 @@
     "pod-install": "^0.1.0",
     "prettier": "^2.0.5",
     "react": "18.1.0",
-    "react-native": "^0.72.0",
+    "react-native": "0.70.6",
     "react-native-builder-bob": "^0.20.3",
     "react-native-version": "^4.0.0",
     "typescript": "^4.5.2"
@@ -76,8 +76,9 @@
     "react-native": "*"
   },
   "engines": {
-    "node": ">= 18.0.0"
+    "node": ">= 16.0.0"
   },
+  "packageManager": "^yarn@1.22.15",
   "react-native-builder-bob": {
     "source": "src",
     "output": "lib",
